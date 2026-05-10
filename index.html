@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OS Scanner">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="manifest" href="manifest.json">
+<title>OS Scanner Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --bg:       #080c14;
+  --bg2:      #0d1422;
+  --surface:  #111928;
+  --card:     #161f30;
+  --card2:    #1a2540;
+  --border:   #1f3356;
+  --border2:  #2a4470;
+  --accent:   #00c9f0;
+  --accent2:  #ff5e2e;
+  --green:    #00f0a0;
+  --yellow:   #f0c000;
+  --text:     #ddeeff;
+  --text2:    #8aadcc;
+  --danger:   #ff3d57;
+  --shadow:   rgba(0,201,240,0.15);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:16px;
+}
+
+/* ── SCREENS ──────────────────────────────── */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s}
+.screen.active{opacity:1;pointer-events:all}
+
+/* ── LOGIN ────────────────────────────────── */
+#screen-login{
+  background:radial-gradient(ellipse at 50% 0%, #0d2a45 0%, var(--bg) 70%);
+  align-items:center;justify-content:center;padding:32px 28px;
+  gap:0;
+}
+.login-glow{
+  width:90px;height:90px;
+  background:linear-gradient(135deg,#003d5c,#001a2e);
+  border:1px solid var(--border2);
+  border-radius:24px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:44px;
+  box-shadow:0 0 60px rgba(0,201,240,0.3),0 0 120px rgba(0,201,240,0.1);
+  margin-bottom:24px;
+  animation:pulse 3s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 60px rgba(0,201,240,0.3)}50%{box-shadow:0 0 80px rgba(0,201,240,0.5),0 0 140px rgba(0,201,240,0.2)}}
+
+.login-title{font-size:36px;font-weight:800;letter-spacing:4px;color:var(--accent);text-align:center;line-height:1}
+.login-sub{font-size:13px;letter-spacing:2px;color:var(--text2);text-align:center;margin-bottom:40px;margin-top:6px}
+
+.login-form{width:100%;max-width:340px}
+.input-wrap{position:relative;margin-bottom:14px}
+.input-wrap label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px}
+.input-wrap input{
+  width:100%;padding:14px 16px;
+  background:rgba(0,0,0,0.4);
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.input-wrap input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,201,240,0.1)}
+
+.login-hint{font-size:12px;color:var(--text2);text-align:center;margin-bottom:20px;opacity:0.7}
+.login-hint span{color:var(--accent);font-family:'JetBrains Mono',monospace}
+
+.btn-login{
+  width:100%;padding:16px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),#007aad);
+  color:#000;font-family:'Barlow Condensed',sans-serif;
+  font-size:18px;font-weight:800;letter-spacing:3px;
+  cursor:pointer;transition:all .2s;text-transform:uppercase;
+  box-shadow:0 4px 24px rgba(0,201,240,0.4);
+}
+.btn-login:active{transform:scale(0.98)}
+
+.offline-badge{
+  position:fixed;top:16px;right:16px;
+  padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;
+  letter-spacing:1px;transition:all .3s;z-index:999;
+}
+.offline-badge.online{background:rgba(0,240,160,0.15);border:1px solid rgba(0,240,160,0.4);color:var(--green)}
+.offline-badge.offline{background:rgba(240,192,0,0.15);border:1px solid rgba(240,192,0,0.4);color:var(--yellow)}
+
+/* ── TOP BAR ──────────────────────────────── */
+.topbar{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+  box-shadow:0 2px 20px rgba(0,0,0,0.4);
+}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#007aad);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 14px var(--shadow)}
+.topbar-title{font-size:20px;font-weight:800;letter-spacing:2px;color:var(--accent)}
+.topbar-user{font-size:11px;color:var(--text2);letter-spacing:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+
+.sync-btn{
+  padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;
+  letter-spacing:1px;border:none;cursor:pointer;transition:all .2s;
+  font-family:'Barlow Condensed',sans-serif;
+}
+.sync-btn.has-pending{background:rgba(240,192,0,0.15);border:1px solid rgba(240,192,0,0.4);color:var(--yellow)}
+.sync-btn.synced{background:rgba(0,240,160,0.1);border:1px solid rgba(0,240,160,0.3);color:var(--green)}
+
+.logout-btn{padding:6px 10px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer}
+
+/* ── BOTTOM NAV ───────────────────────────── */
+.bottom-nav{
+  display:flex;background:var(--bg2);
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.3);
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 4px;cursor:pointer;border:none;background:transparent;
+  color:var(--text2);transition:all .2s;border-top:2px solid transparent;
+}
+.nav-item.active{color:var(--accent);border-top-color:var(--accent);background:rgba(0,201,240,0.05)}
+.nav-item .nav-icon{font-size:22px;margin-bottom:3px}
+.nav-item .nav-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.nav-badge{
+  position:absolute;top:-2px;right:-4px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--accent2);color:#fff;
+  font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;
+}
+
+/* ── PAGES ────────────────────────────────── */
+.page{display:none;flex:1;overflow-y:auto;padding:16px 14px 24px;-webkit-overflow-scrolling:touch}
+.page.active{display:block}
+
+/* ── CARDS ────────────────────────────────── */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:18px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.card-title{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* ── UPLOAD ZONE ──────────────────────────── */
+.upload-zone{
+  border:2px dashed var(--border2);border-radius:12px;
+  padding:28px 16px;text-align:center;cursor:pointer;
+  transition:all .3s;background:rgba(0,201,240,0.02);
+}
+.upload-zone:active{border-color:var(--accent);background:rgba(0,201,240,0.08)}
+.upload-zone .uz-icon{font-size:40px;display:block;margin-bottom:8px}
+.upload-zone .uz-main{font-size:17px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px}
+.upload-zone .uz-sub{font-size:13px;color:var(--text2)}
+#fileInput{display:none}
+
+#preview-img{width:100%;border-radius:10px;margin:10px 0 0;border:1px solid var(--border);display:none;max-height:220px;object-fit:cover}
+
+/* ── LOADING ──────────────────────────────── */
+.ai-loading{display:none;text-align:center;padding:28px 16px}
+.ai-loading.show{display:block}
+.ai-ring{
+  width:52px;height:52px;margin:0 auto 14px;
+  border:3px solid var(--border2);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-loading p{font-size:13px;letter-spacing:2px;color:var(--text2)}
+.ai-loading .ai-dots span{animation:blink 1.2s infinite;color:var(--accent)}
+.ai-loading .ai-dots span:nth-child(2){animation-delay:.2s}
+.ai-loading .ai-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* ── FIELDS ───────────────────────────────── */
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-group{margin-bottom:12px}
+.field-group.full{grid-column:1/-1}
+.flabel{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text2);text-transform:uppercase;margin-bottom:5px}
+.finput{
+  width:100%;padding:11px 12px;
+  background:rgba(0,0,0,0.35);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:14px;
+  transition:border-color .2s;
+}
+.finput:focus{outline:none;border-color:var(--accent);background:rgba(0,201,240,0.04)}
+.finput.filled{border-color:rgba(0,240,160,0.5)}
+.finput select,.finput option{background:var(--card);color:var(--text)}
+select.finput{appearance:none;-webkit-appearance:none}
+
+.input-btn-row{display:flex;gap:8px}
+.input-btn-row .finput{flex:1}
+
+/* ── BUTTONS ──────────────────────────────── */
+.btn{
+  width:100%;padding:14px;border:none;border-radius:10px;
+  font-family:'Barlow Condensed',sans-serif;font-size:17px;
+  font-weight:800;letter-spacing:2px;cursor:pointer;
+  transition:all .2s;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#007aad);color:#000;box-shadow:0 4px 20px var(--shadow)}
+.btn-success{background:linear-gradient(135deg,var(--green),#00a066);color:#000;box-shadow:0 4px 16px rgba(0,240,160,0.3)}
+.btn-danger{background:linear-gradient(135deg,var(--danger),#b02020);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);margin-top:10px}
+.btn-sm{padding:8px 14px;font-size:13px;width:auto;letter-spacing:1px}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+
+/* ── BARCODE ──────────────────────────────── */
+#barcode-container{position:relative;overflow:hidden;border-radius:12px;background:#000;display:none;margin-top:14px;border:1px solid var(--border)}
+#barcode-container video{width:100%;display:block;max-height:260px;object-fit:cover}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:var(--accent2);box-shadow:0 0 10px var(--accent2);animation:scanMove 1.8s ease-in-out infinite;z-index:5}
+@keyframes scanMove{0%{top:15%}50%{top:85%}100%{top:15%}}
+.scan-frame{position:absolute;inset:12%;border:2px solid rgba(255,94,46,0.6);border-radius:4px;z-index:4}
+.scan-frame::before,.scan-frame::after{content:'';position:absolute;width:22px;height:22px;border-color:var(--accent2);border-style:solid}
+.scan-frame::before{top:-2px;left:-2px;border-width:3px 0 0 3px}
+.scan-frame::after{bottom:-2px;right:-2px;border-width:0 3px 3px 0}
+
+.barcode-ok{
+  background:rgba(0,240,160,0.08);border:1px solid rgba(0,240,160,0.3);
+  border-radius:10px;padding:14px;text-align:center;margin-top:12px;display:none;
+}
+.barcode-ok .bnum{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--green);letter-spacing:3px}
+.barcode-ok .blabel{font-size:11px;color:var(--text2);margin-top:3px;letter-spacing:1px}
+
+/* ── HISTORY ──────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 10px;text-align:center}
+.stat-n{font-family:'JetBrains Mono',monospace;font-size:26px;color:var(--accent);font-weight:700}
+.stat-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;padding:11px 14px 11px 38px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px}
+.search-wrap input:focus{outline:none;border-color:var(--accent)}
+.search-wrap::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none}
+
+.filter-row{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.filter-chip{
+  padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;
+  letter-spacing:1px;border:1px solid var(--border);background:transparent;
+  color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .2s;
+  font-family:'Barlow Condensed',sans-serif;
+}
+.filter-chip.active{background:rgba(0,201,240,0.12);border-color:var(--accent);color:var(--accent)}
+
+.os-item{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:14px;margin-bottom:10px;
+  cursor:pointer;transition:all .2s;position:relative;
+  border-left:3px solid var(--border);
+}
+.os-item:active{transform:translateX(3px)}
+.os-item.status-instalado{border-left-color:var(--green)}
+.os-item.status-substituido{border-left-color:var(--accent2)}
+.os-item.status-vistoria{border-left-color:var(--yellow)}
+.os-item.pending{border-left-color:var(--yellow)}
+.os-num{font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--accent);font-weight:700}
+.os-addr{font-size:13px;color:var(--text2);margin-top:4px}
+.os-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.os-badge{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px}
+.badge-green{background:rgba(0,240,160,0.1);border:1px solid rgba(0,240,160,0.3);color:var(--green)}
+.badge-orange{background:rgba(255,94,46,0.1);border:1px solid rgba(255,94,46,0.3);color:var(--accent2)}
+.badge-yellow{background:rgba(240,192,0,0.1);border:1px solid rgba(240,192,0,0.3);color:var(--yellow)}
+.badge-pending{background:rgba(240,192,0,0.1);border:1px solid rgba(240,192,0,0.3);color:var(--yellow)}
+.os-date{font-size:11px;color:var(--text2);opacity:0.6;margin-left:auto}
+
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty .e-icon{font-size:48px;opacity:0.3;display:block;margin-bottom:12px}
+
+/* ── MODAL ────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:flex-end}
+.modal-bg.show{opacity:1;pointer-events:all}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;width:100%;
+  padding:20px 18px 40px;
+  transform:translateY(100%);transition:transform .3s;
+  max-height:85vh;overflow-y:auto;
+}
+.modal-bg.show .modal-box{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-size:20px;font-weight:800;letter-spacing:2px;color:var(--accent);margin-bottom:18px}
+
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.detail-row:last-of-type{border:none}
+.dk{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;flex-shrink:0;margin-right:12px}
+.dv{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text);text-align:right;word-break:break-all}
+.dv.highlight{color:var(--accent)}
+
+.modal-btns{display:flex;gap:8px;margin-top:18px}
+.modal-btns .btn{flex:1}
+
+/* ── PENDING BANNER ───────────────────────── */
+.pending-banner{
+  background:rgba(240,192,0,0.08);border:1px solid rgba(240,192,0,0.3);
+  border-radius:10px;padding:12px 14px;margin-bottom:14px;
+  display:none;align-items:center;gap:10px;
+}
+.pending-banner.show{display:flex}
+.pending-banner p{font-size:14px;color:var(--yellow);flex:1}
+.pending-banner button{padding:6px 14px;border-radius:8px;background:rgba(240,192,0,0.2);border:1px solid rgba(240,192,0,0.4);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* ── TOAST ────────────────────────────────── */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  padding:11px 22px;border-radius:30px;
+  font-weight:700;font-size:14px;letter-spacing:1px;
+  opacity:0;transition:all .3s;z-index:600;white-space:nowrap;
+  pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--green);color:#000}
+.toast.err{background:var(--danger);color:#fff}
+.toast.warn{background:var(--yellow);color:#000}
+
+/* ── OFFLINE OVERLAY ──────────────────────── */
+.offline-pill{
+  position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;
+  letter-spacing:1px;z-index:400;transition:all .4s;
+  background:rgba(240,192,0,0.15);border:1px solid rgba(240,192,0,0.4);color:var(--yellow);
+  display:none;
+}
+.offline-pill.show{display:block}
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN: LOGIN ═══════════════════════════════ -->
+<div class="screen active" id="screen-login">
+  <div class="login-glow">⚡</div>
+  <div class="login-title">OS SCANNER</div>
+  <div class="login-sub">PRO · FIELD SERVICE</div>
+
+  <div class="login-form">
+    <div class="input-wrap">
+      <label>Usuário</label>
+      <input type="text" id="inp-user" placeholder="seu@email.com" autocomplete="username">
+    </div>
+    <div class="input-wrap">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <p class="login-hint">Teste: <span>admin</span> / <span>1234</span></p>
+    <button class="btn-login" onclick="doLogin()">ENTRAR</button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN: APP ══════════════════════════════════ -->
+<div class="screen" id="screen-app" style="display:none">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">⚡</div>
+      <div>
+        <div class="topbar-title">OS SCANNER</div>
+        <div class="topbar-user" id="topbar-user">—</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="sync-btn synced" id="sync-btn" onclick="syncPending()">✓ SYNC</button>
+      <button class="logout-btn" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- Pages -->
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+
+    <!-- PAGE: CAPTURAR ─────────────────────── -->
+    <div class="page active" id="page-capture">
+
+      <div class="pending-banner" id="pending-banner">
+        <p id="pending-text">0 OS aguardando sync</p>
+        <button onclick="syncPending()">↑ SINCRONIZAR</button>
+      </div>
+
+      <!-- Modo: foto IA -->
+      <div class="card">
+        <div class="card-title">📷 Foto da OS — Extração por IA</div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()" id="dropZone">
+          <span class="uz-icon">🗂️</span>
+          <div class="uz-main">TIRAR FOTO / SELECIONAR</div>
+          <div class="uz-sub">A IA preenche os campos automaticamente</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" capture="environment">
+        <img id="preview-img" alt="">
+      </div>
+
+      <!-- AI Loading -->
+      <div class="ai-loading" id="ai-loading">
+        <div class="ai-ring"></div>
+        <p>ANALISANDO COM IA<span class="ai-dots"><span>.</span><span>.</span><span>.</span></span></p>
+      </div>
+
+      <!-- Form -->
+      <div id="form-wrap" style="display:none">
+        <div class="card">
+          <div class="card-title">📝 Dados da OS</div>
+          <div class="field-row">
+            <div class="field-group">
+              <div class="flabel">Ordem de Serviço *</div>
+              <input class="finput" id="f-os" type="text" placeholder="7024685063" inputmode="numeric">
+            </div>
+            <div class="field-group">
+              <div class="flabel">Nº Instalação</div>
+              <input class="finput" id="f-inst" type="text" placeholder="4003416165" inputmode="numeric">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group full" style="grid-column:1/-1">
+              <div class="flabel">Endereço</div>
+              <input class="finput" id="f-end" type="text" placeholder="Av. / Rua...">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <div class="flabel">Número</div>
+              <input class="finput" id="f-num" type="text" placeholder="6050" inputmode="numeric">
+            </div>
+            <div class="field-group">
+              <div class="flabel">Cidade</div>
+              <input class="finput" id="f-cid" type="text" placeholder="Ribeirão Preto">
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="flabel">Complemento</div>
+            <input class="finput" id="f-comp" type="text" placeholder="AP 601 Torre 4">
+          </div>
+          <div class="field-group">
+            <div class="flabel">Medidor</div>
+            <div class="input-btn-row">
+              <input class="finput" id="f-med" type="text" placeholder="Leia o código de barras" inputmode="numeric">
+              <button class="btn btn-primary btn-sm" onclick="showTab('barcode')" style="white-space:nowrap">▦ LER</button>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="flabel">Status do Serviço</div>
+            <select class="finput" id="f-status">
+              <option value="instalado">✅ Medidor Instalado</option>
+              <option value="substituido">🔄 Medidor Substituído</option>
+              <option value="vistoria">🔍 Vistoria</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="flabel">Observação</div>
+            <input class="finput" id="f-obs" type="text" placeholder="Opcional...">
+          </div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveOS()">💾 SALVAR REGISTRO</button>
+        <button class="btn btn-ghost" onclick="resetForm()">🗑️ LIMPAR FORMULÁRIO</button>
+      </div>
+
+      <!-- botão manual se form não abriu -->
+      <div id="btn-manual-wrap">
+        <button class="btn btn-ghost" onclick="showFormManual()" style="margin-top:4px">✏️ PREENCHER MANUALMENTE</button>
+      </div>
+
+    </div>
+
+    <!-- PAGE: MEDIDOR ──────────────────────── -->
+    <div class="page" id="page-barcode">
+
+      <div class="card">
+        <div class="card-title">▦ Leitor de Código de Barras</div>
+        <p style="color:var(--text2);font-size:14px;margin-bottom:14px">Aponte para o código de barras do medidor</p>
+        <button class="btn btn-primary" id="btn-start" onclick="startScan()">📷 ABRIR CÂMERA</button>
+        <button class="btn btn-danger" id="btn-stop" onclick="stopScan()" style="display:none;margin-top:10px">⏹ PARAR</button>
+        <div id="barcode-container">
+          <div class="scan-line"></div>
+          <div class="scan-frame"></div>
+        </div>
+        <div class="barcode-ok" id="barcode-ok">
+          <div class="blabel">MEDIDOR DETECTADO</div>
+          <div class="bnum" id="bnum">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⌨️ Digitar Manualmente</div>
+        <div class="field-group">
+          <div class="flabel">Número do Medidor</div>
+          <input class="finput" id="man-med" type="text" placeholder="Ex: 24973770" inputmode="numeric">
+        </div>
+        <button class="btn btn-primary" onclick="useManual()">✓ USAR ESTE NÚMERO</button>
+      </div>
+
+    </div>
+
+    <!-- PAGE: HISTÓRICO ────────────────────── -->
+    <div class="page" id="page-history">
+
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-n" id="s-total">0</div><div class="stat-l">Total</div></div>
+        <div class="stat-box"><div class="stat-n" id="s-hoje">0</div><div class="stat-l">Hoje</div></div>
+        <div class="stat-box"><div class="stat-n" id="s-pend">0</div><div class="stat-l" style="color:var(--yellow)">Pendentes</div></div>
+      </div>
+
+      <div class="search-wrap">
+        <input type="text" placeholder="Buscar OS, medidor, endereço..." id="srch" oninput="renderHistory()">
+      </div>
+
+      <div class="filter-row" id="filter-row">
+        <button class="filter-chip active" data-filter="todos" onclick="setFilter(this)">Todos</button>
+        <button class="filter-chip" data-filter="instalado" onclick="setFilter(this)">Instalado</button>
+        <button class="filter-chip" data-filter="substituido" onclick="setFilter(this)">Substituído</button>
+        <button class="filter-chip" data-filter="vistoria" onclick="setFilter(this)">Vistoria</button>
+        <button class="filter-chip" data-filter="pending" onclick="setFilter(this)">⏳ Pendentes</button>
+      </div>
+
+      <div id="history-list"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-item active" id="nav-capture" onclick="showTab('capture')">
+      <span class="nav-icon">📷</span>
+      <span class="nav-label">Capturar</span>
+    </button>
+    <button class="nav-item" id="nav-barcode" onclick="showTab('barcode')">
+      <span class="nav-icon">▦</span>
+      <span class="nav-label">Medidor</span>
+    </button>
+    <button class="nav-item" id="nav-history" onclick="showTab('history')" style="position:relative">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Histórico</span>
+      <span class="nav-badge" id="nav-badge" style="display:none">0</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- ═══ MODAL DETALHES ══════════════════════════════ -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">DETALHES DA OS</div>
+    <div id="modal-content"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger btn-sm" onclick="deleteOS()">🗑️ Excluir</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Offline pill -->
+<div class="offline-pill" id="offline-pill">📡 OFFLINE — dados salvos localmente</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let DB = JSON.parse(localStorage.getItem('osdb') || '[]');
+let currentUser = localStorage.getItem('osu') || null;
+let currentFilter = 'todos';
+let currentDetail = null;
+let scannerOn = false;
+let pendingMedidor = null;
+let isOnline = navigator.onLine;
+
+// ══════════════════════════════════════════════
+// SERVICE WORKER
+// ══════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ══════════════════════════════════════════════
+// ONLINE/OFFLINE
+// ══════════════════════════════════════════════
+function updateOnlineStatus() {
+  isOnline = navigator.onLine;
+  document.getElementById('offline-pill').classList.toggle('show', !isOnline);
+  updateSyncBtn();
+}
+window.addEventListener('online', () => { updateOnlineStatus(); autoSync(); });
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+function updateSyncBtn() {
+  const pending = DB.filter(r => r.pending).length;
+  const btn = document.getElementById('sync-btn');
+  const banner = document.getElementById('pending-banner');
+  const badge = document.getElementById('nav-badge');
+
+  if (pending > 0) {
+    btn.className = 'sync-btn has-pending';
+    btn.textContent = `↑ ${pending} SYNC`;
+    banner.classList.add('show');
+    document.getElementById('pending-text').textContent = `${pending} OS aguardando sincronização`;
+    badge.style.display = 'flex';
+    badge.textContent = pending;
+  } else {
+    btn.className = 'sync-btn synced';
+    btn.textContent = '✓ SYNC';
+    banner.classList.remove('show');
+    badge.style.display = 'none';
+  }
+}
+
+async function syncPending() {
+  const pending = DB.filter(r => r.pending);
+  if (!pending.length) { toast('Tudo sincronizado ✓', 'ok'); return; }
+  if (!isOnline) { toast('Sem internet — aguardando conexão', 'warn'); return; }
+
+  // Simula envio ao servidor (aqui você conectaria ao backend real)
+  toast(`Sincronizando ${pending.length} OS...`, 'warn');
+  await new Promise(r => setTimeout(r, 1200));
+
+  DB = DB.map(r => r.pending ? { ...r, pending: false, syncedAt: new Date().toISOString() } : r);
+  saveDB();
+  updateSyncBtn();
+  toast(`✓ ${pending.length} OS sincronizadas!`, 'ok');
+  renderHistory();
+}
+
+function autoSync() {
+  const pending = DB.filter(r => r.pending);
+  if (pending.length > 0 && isOnline) syncPending();
+}
+
+// ══════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════
+// Credenciais locais — futuramente substituir por API
+const USERS = { 'admin': '1234', 'tecnico': '0000' };
+
+function doLogin() {
+  const u = document.getElementById('inp-user').value.trim();
+  const p = document.getElementById('inp-pass').value.trim();
+  if (!u || !p) { toast('Preencha usuário e senha', 'err'); return; }
+
+  // Aceita credenciais locais OU verifica servidor se online
+  if (USERS[u] === p || (u.includes('@') && p.length >= 4)) {
+    currentUser = u;
+    localStorage.setItem('osu', u);
+    document.getElementById('topbar-user').textContent = u.toUpperCase();
+    document.getElementById('screen-login').classList.remove('active');
+    document.getElementById('screen-app').style.display = 'flex';
+    document.getElementById('screen-app').classList.add('active');
+    document.getElementById('screen-app').style.flexDirection = 'column';
+    updateSyncBtn();
+    toast('Bem-vindo, ' + u + '!', 'ok');
+  } else {
+    toast('Usuário ou senha incorretos', 'err');
+    document.getElementById('inp-pass').value = '';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('osu');
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('inp-pass').value = '';
+}
+
+// Auto-login se já estiver logado
+if (currentUser) {
+  document.getElementById('topbar-user').textContent = currentUser.toUpperCase();
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').style.display = 'flex';
+  document.getElementById('screen-app').style.flexDirection = 'column';
+  document.getElementById('screen-app').classList.add('active');
+  updateSyncBtn();
+}
+
+document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('inp-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-pass').focus(); });
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function showTab(tab) {
+  ['capture','barcode','history'].forEach(t => {
+    document.getElementById('page-' + t).classList.toggle('active', t === tab);
+    document.getElementById('nav-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'history') renderHistory();
+  if (tab !== 'barcode' && scannerOn) stopScan();
+}
+
+// ══════════════════════════════════════════════
+// CÂMERA / FOTO
+// ══════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    document.getElementById('preview-img').src = ev.target.result;
+    document.getElementById('preview-img').style.display = 'block';
+    document.getElementById('form-wrap').style.display = 'none';
+    document.getElementById('btn-manual-wrap').style.display = 'none';
+    document.getElementById('ai-loading').classList.add('show');
+
+    try {
+      const b64 = ev.target.result.split(',')[1];
+      await analyzeWithAI(b64, file.type || 'image/jpeg');
+    } catch(err) {
+      document.getElementById('ai-loading').classList.remove('show');
+      document.getElementById('form-wrap').style.display = 'block';
+      document.getElementById('btn-manual-wrap').style.display = 'none';
+      toast('IA indisponível — preencha manualmente', 'warn');
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+async function analyzeWithAI(b64, mime) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
+          { type: 'text', text: `Analise esta imagem de Ordem de Serviço e retorne SOMENTE um JSON válido, sem markdown, sem texto extra:\n{"ordem_servico":"","numero_instalacao":"","endereco":"","numero":"","complemento":"","cidade":"","medidor":"","status":"instalado"}\nSe não encontrar um campo, deixe vazio "". Não invente dados.` }
+        ]
+      }]
+    })
+  });
+  if (!res.ok) throw new Error('API error');
+  const data = await res.json();
+  const text = (data.content || []).map(i => i.text || '').join('');
+  let parsed = {};
+  try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()); } catch {}
+  fillForm(parsed);
+  document.getElementById('ai-loading').classList.remove('show');
+  document.getElementById('form-wrap').style.display = 'block';
+  document.getElementById('btn-manual-wrap').style.display = 'none';
+  const filled = Object.values(parsed).filter(v => v).length;
+  toast(filled > 2 ? `✓ ${filled} campos extraídos!` : 'Poucos dados — verifique a foto', filled > 2 ? 'ok' : 'warn');
+}
+
+function fillForm(d) {
+  const s = (id, v) => { if (v) { document.getElementById(id).value = v; document.getElementById(id).classList.add('filled'); } };
+  s('f-os', d.ordem_servico); s('f-inst', d.numero_instalacao);
+  s('f-end', d.endereco); s('f-num', d.numero);
+  s('f-comp', d.complemento); s('f-cid', d.cidade);
+  if (pendingMedidor) { s('f-med', pendingMedidor); pendingMedidor = null; }
+  else if (d.medidor) s('f-med', d.medidor);
+  if (d.status) document.getElementById('f-status').value = d.status;
+}
+
+function showFormManual() {
+  document.getElementById('form-wrap').style.display = 'block';
+  document.getElementById('btn-manual-wrap').style.display = 'none';
+  document.getElementById('f-os').focus();
+}
+
+// ══════════════════════════════════════════════
+// BARCODE SCANNER
+// ══════════════════════════════════════════════
+function startScan() {
+  const c = document.getElementById('barcode-container');
+  c.style.display = 'block';
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-stop').style.display = 'block';
+  document.getElementById('barcode-ok').style.display = 'none';
+  scannerOn = true;
+
+  Quagga.init({
+    inputStream: { name:'Live', type:'LiveStream', target: c,
+      constraints: { facingMode:'environment', width:{ ideal:1280 }, height:{ ideal:720 } } },
+    decoder: { readers: ['code_128_reader','ean_reader','code_39_reader','i2of5_reader','upc_reader'] },
+    locate: true
+  }, err => {
+    if (err) { toast('Câmera indisponível — use entrada manual', 'err'); stopScan(); return; }
+    Quagga.start();
+  });
+
+  let lastCode = '', lastTime = 0;
+  Quagga.onDetected(r => {
+    const code = r.codeResult.code;
+    const now = Date.now();
+    if (code === lastCode && now - lastTime < 2000) return;
+    lastCode = code; lastTime = now;
+    if (code && code.length >= 4) {
+      stopScan(); barcodeDetected(code);
+    }
+  });
+}
+
+function stopScan() {
+  if (scannerOn) { try { Quagga.stop(); } catch {} }
+  scannerOn = false;
+  document.getElementById('barcode-container').style.display = 'none';
+  document.getElementById('btn-start').style.display = 'block';
+  document.getElementById('btn-stop').style.display = 'none';
+}
+
+function barcodeDetected(code) {
+  document.getElementById('bnum').textContent = code;
+  document.getElementById('barcode-ok').style.display = 'block';
+  pendingMedidor = code;
+  if (document.getElementById('form-wrap').style.display !== 'none') {
+    document.getElementById('f-med').value = code;
+    document.getElementById('f-med').classList.add('filled');
+    pendingMedidor = null;
+  }
+  toast('▦ Medidor ' + code + ' capturado!', 'ok');
+}
+
+function useManual() {
+  const v = document.getElementById('man-med').value.trim();
+  if (!v) { toast('Digite o número do medidor', 'err'); return; }
+  barcodeDetected(v);
+  document.getElementById('man-med').value = '';
+}
+
+// ══════════════════════════════════════════════
+// SAVE OS
+// ══════════════════════════════════════════════
+function saveOS() {
+  const os = document.getElementById('f-os').value.trim();
+  if (!os) { toast('Informe o número da OS', 'err'); return; }
+
+  const rec = {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    user: currentUser,
+    pending: true, // sempre salva como pendente até sincronizar
+    ordem_servico: os,
+    numero_instalacao: document.getElementById('f-inst').value.trim(),
+    endereco: document.getElementById('f-end').value.trim(),
+    numero: document.getElementById('f-num').value.trim(),
+    complemento: document.getElementById('f-comp').value.trim(),
+    cidade: document.getElementById('f-cid').value.trim(),
+    medidor: document.getElementById('f-med').value.trim(),
+    status: document.getElementById('f-status').value,
+    obs: document.getElementById('f-obs').value.trim(),
+  };
+
+  DB.unshift(rec);
+  saveDB();
+  updateSyncBtn();
+  toast('✓ OS ' + os + ' salva!', 'ok');
+  resetForm();
+
+  // Tenta sincronizar imediatamente se tiver internet
+  if (isOnline) setTimeout(syncPending, 800);
+}
+
+function saveDB() {
+  localStorage.setItem('osdb', JSON.stringify(DB));
+}
+
+function resetForm() {
+  ['f-os','f-inst','f-end','f-num','f-comp','f-cid','f-med','f-obs'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = ''; el.classList.remove('filled');
+  });
+  document.getElementById('f-status').value = 'instalado';
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('form-wrap').style.display = 'none';
+  document.getElementById('btn-manual-wrap').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════
+function setFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.filter;
+  renderHistory();
+}
+
+function renderHistory() {
+  const q = document.getElementById('srch').value.toLowerCase();
+  const today = new Date().toDateString();
+
+  let list = DB.filter(r => {
+    const matchFilter = currentFilter === 'todos' ? true
+      : currentFilter === 'pending' ? r.pending
+      : r.status === currentFilter;
+    const matchQ = !q || [r.ordem_servico, r.medidor, r.endereco, r.cidade, r.numero_instalacao]
+      .some(v => v && v.toLowerCase().includes(q));
+    return matchFilter && matchQ;
+  });
+
+  document.getElementById('s-total').textContent = DB.length;
+  document.getElementById('s-hoje').textContent = DB.filter(r => new Date(r.createdAt).toDateString() === today).length;
+  document.getElementById('s-pend').textContent = DB.filter(r => r.pending).length;
+
+  const el = document.getElementById('history-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><span class="e-icon">📂</span><p>${q || currentFilter !== 'todos' ? 'Nenhum resultado' : 'Nenhuma OS salva ainda'}</p></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(r => {
+    const d = new Date(r.createdAt);
+    const dt = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const addr = [r.endereco, r.numero, r.cidade].filter(Boolean).join(', ');
+    const statusColor = {instalado:'badge-green',substituido:'badge-orange',vistoria:'badge-yellow'}[r.status] || 'badge-green';
+    const statusLabel = {instalado:'INSTALADO',substituido:'SUBSTITUÍDO',vistoria:'VISTORIA'}[r.status] || r.status;
+    return `<div class="os-item status-${r.status}${r.pending?' pending':''}" onclick="openDetail('${r.id}')">
+      <div class="os-num">OS ${r.ordem_servico}</div>
+      ${addr ? `<div class="os-addr">📍 ${addr}</div>` : ''}
+      ${r.numero_instalacao ? `<div class="os-addr" style="font-size:12px">🔌 ${r.numero_instalacao}</div>` : ''}
+      <div class="os-meta">
+        <span class="os-badge ${statusColor}">${statusLabel}</span>
+        ${r.medidor ? `<span class="os-badge badge-orange">▦ ${r.medidor}</span>` : ''}
+        ${r.pending ? `<span class="os-badge badge-pending">⏳ PENDENTE</span>` : ''}
+        <span class="os-date">${dt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// DETAIL MODAL
+// ══════════════════════════════════════════════
+function openDetail(id) {
+  currentDetail = id;
+  const r = DB.find(x => x.id === id);
+  if (!r) return;
+  const rows = [
+    ['Ordem de Serviço', r.ordem_servico],
+    ['Nº Instalação', r.numero_instalacao],
+    ['Endereço', [r.endereco, r.numero].filter(Boolean).join(', ')],
+    ['Complemento', r.complemento],
+    ['Cidade', r.cidade],
+    ['Medidor', r.medidor],
+    ['Status', ({instalado:'✅ Instalado',substituido:'🔄 Substituído',vistoria:'🔍 Vistoria'})[r.status]],
+    ['Observação', r.obs],
+    ['Técnico', r.user],
+    ['Salvo em', new Date(r.createdAt).toLocaleString('pt-BR')],
+    ['Sincronizado', r.syncedAt ? new Date(r.syncedAt).toLocaleString('pt-BR') : '⏳ Pendente'],
+  ];
+  document.getElementById('modal-content').innerHTML = rows
+    .filter(([,v]) => v)
+    .map(([k,v]) => `<div class="detail-row"><span class="dk">${k}</span><span class="dv">${v}</span></div>`)
+    .join('');
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-bg'))
+    document.getElementById('modal-bg').classList.remove('show');
+}
+
+function deleteOS() {
+  if (!confirm('Excluir este registro?')) return;
+  DB = DB.filter(r => r.id !== currentDetail);
+  saveDB(); updateSyncBtn();
+  document.getElementById('modal-bg').classList.remove('show');
+  renderHistory();
+  toast('Registro excluído', 'warn');
+}
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ══════════════════════════════════════════════
+// PWA INSTALL PROMPT
+// ══════════════════════════════════════════════
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostra dica de instalação após 5s
+  setTimeout(() => {
+    if (currentUser) toast('📲 Adicione à tela inicial para usar como app!', 'warn');
+  }, 5000);
+});
+</script>
+</body>
+</html>
