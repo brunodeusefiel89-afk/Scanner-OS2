@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS Scanner — Portal do Gestor</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+:root{--bg:#080c14;--bg2:#0d1422;--surface:#111928;--card:#161f30;--border:#1f3356;--border2:#2a4470;--accent:#00c9f0;--green:#00f0a0;--yellow:#f0c000;--text:#ddeeff;--text2:#8aadcc;--danger:#ff3d57}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;min-height:100vh}
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at 50% 0%,#0d2a45,var(--bg) 70%)}
+.login-box{width:100%;max-width:360px;text-align:center}
+.login-icon{font-size:52px;margin-bottom:16px}
+.login-title{font-size:32px;font-weight:800;letter-spacing:4px;color:var(--accent);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);letter-spacing:2px;margin-bottom:32px}
+.iw{margin-bottom:14px;text-align:left}
+.iw label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px}
+.iw input{width:100%;padding:13px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px}
+.iw input:focus{outline:none;border-color:var(--accent)}
+.btn-login{width:100%;padding:15px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--accent),#007aad);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:3px;cursor:pointer;margin-top:4px}
+.login-err{color:var(--danger);font-size:13px;margin-top:10px;display:none}
+/* APP */
+#app-screen{display:none;min-height:100vh;flex-direction:column}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),#007aad);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.topbar-title{font-size:22px;font-weight:800;letter-spacing:2px;color:var(--accent)}
+.topbar-sub{font-size:11px;color:var(--text2);letter-spacing:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.btn-sm{padding:7px 14px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;border:none}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#007aad);color:#000}
+.btn-green{background:linear-gradient(135deg,var(--green),#00a066);color:#000}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.main{padding:24px;max-width:1400px;margin:0 auto;width:100%}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;position:relative;overflow:hidden}
+.stat-box::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-n{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent)}
+.stat-l{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+/* SEARCH */
+.search-bar{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px}
+.search-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.sg{flex:1;min-width:180px}
+.sg label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:5px}
+.sg input,.sg select{width:100%;padding:10px 12px;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px}
+.sg input:focus,.sg select:focus{outline:none;border-color:var(--accent)}
+select{appearance:none;-webkit-appearance:none}
+.btn-search{padding:10px 22px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#007aad);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;cursor:pointer;border:none;white-space:nowrap;align-self:flex-end}
+/* EXPORT ROW */
+.export-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.result-count{font-size:13px;color:var(--text2);margin-left:auto}
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead tr{background:rgba(0,201,240,.08);border-bottom:1px solid var(--border)}
+th{padding:12px 14px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;text-align:left;white-space:nowrap}
+td{padding:11px 14px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:rgba(0,201,240,.03)}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.badge-green{background:rgba(0,240,160,.1);border:1px solid rgba(0,240,160,.3);color:var(--green)}
+.badge-orange{background:rgba(255,94,46,.1);border:1px solid rgba(255,94,46,.3);color:#ff5e2e}
+.badge-red{background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);color:var(--danger)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:13px}
+.empty{text-align:center;padding:48px;color:var(--text2);font-size:15px}
+.loading{text-align:center;padding:48px;color:var(--text2)}
+.spin{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* PAGINATION */
+.pagination{display:flex;gap:6px;align-items:center;justify-content:center;padding:16px;flex-wrap:wrap}
+.page-btn{padding:6px 14px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2)}
+.page-btn.active{background:rgba(0,201,240,.12);border-color:var(--accent);color:var(--accent)}
+.page-btn:disabled{opacity:.3;cursor:default}
+@media(max-width:600px){.main{padding:14px}.search-row{flex-direction:column}.sg{min-width:100%}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">OS SCANNER</div>
+    <div class="login-sub">PORTAL DO GESTOR</div>
+    <div class="iw"><label>Usuário</label><input type="text" id="g-user" placeholder="gestor" autocomplete="username"></div>
+    <div class="iw"><label>Senha</label><input type="password" id="g-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">ENTRAR</button>
+    <div class="login-err" id="login-err">Usuário ou senha incorretos</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">⚡</div>
+      <div>
+        <div class="topbar-title">OS SCANNER</div>
+        <div class="topbar-sub">PORTAL DO GESTOR</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-sm btn-accent" onclick="loadData()">🔄 ATUALIZAR</button>
+      <button class="btn-sm btn-ghost" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-n" id="st-total">—</div><div class="stat-l">Total OS</div></div>
+      <div class="stat-box"><div class="stat-n" id="st-hoje">—</div><div class="stat-l">Hoje</div></div>
+      <div class="stat-box"><div class="stat-n" id="st-lig" style="color:var(--green)">—</div><div class="stat-l">Lig. Nova</div></div>
+      <div class="stat-box"><div class="stat-n" id="st-sub" style="color:#ff5e2e">—</div><div class="stat-l">Substituição</div></div>
+      <div class="stat-box"><div class="stat-n" id="st-bo" style="color:var(--danger)">—</div><div class="stat-l">B.O</div></div>
+    </div>
+
+    <div class="search-bar">
+      <div class="search-row">
+        <div class="sg">
+          <label>Busca geral</label>
+          <input type="text" id="s-q" placeholder="OS, medidor, endereço, cidade..." onkeydown="if(event.key==='Enter')applyFilter()">
+        </div>
+        <div class="sg" style="max-width:160px">
+          <label>Tipo</label>
+          <select id="s-tipo">
+            <option value="">Todos</option>
+            <option value="instalado">Ligação Nova</option>
+            <option value="substituido">Substituição</option>
+            <option value="bo">B.O</option>
+          </select>
+        </div>
+        <div class="sg" style="max-width:160px">
+          <label>Técnico</label>
+          <select id="s-tec"><option value="">Todos</option></select>
+        </div>
+        <div class="sg" style="max-width:140px">
+          <label>De</label>
+          <input type="date" id="s-de">
+        </div>
+        <div class="sg" style="max-width:140px">
+          <label>Até</label>
+          <input type="date" id="s-ate">
+        </div>
+        <button class="btn-search" onclick="applyFilter()">🔍 BUSCAR</button>
+      </div>
+    </div>
+
+    <div class="export-row">
+      <button class="btn-sm btn-accent" onclick="exportExcel()">📊 EXCEL</button>
+      <button class="btn-sm btn-green" onclick="exportPDF()">📄 PDF</button>
+      <span class="result-count" id="result-count"></span>
+    </div>
+
+    <div class="table-wrap">
+      <div id="table-area" class="loading">
+        <div><div class="spin"></div></div>
+        <div>Carregando dados...</div>
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script>
+var SB_URL = 'https://gzqzwykwtamdywhuflfj.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6cXp3eWt3dGFtZHl3aHVmbGZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjU3MjgsImV4cCI6MjA5NDEwMTcyOH0.Rqu-URDNPm1y9__UePdC0DtPghHIu-ohNmk_Nv6b7nE';
+
+// Credenciais do gestor — altere aqui para adicionar mais gestores
+var GESTORES = {'gestor':'gestor123','admin':'admin123'};
+
+var allData = [];
+var filtered = [];
+var currentPage = 1;
+var PAGE_SIZE = 30;
+
+function doLogin() {
+  var u = document.getElementById('g-user').value.trim();
+  var p = document.getElementById('g-pass').value.trim();
+  if (GESTORES[u] && GESTORES[u] === p) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'flex';
+    sessionStorage.setItem('glogged', '1');
+    loadData();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('glogged');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+}
+
+if (sessionStorage.getItem('glogged')) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+  loadData();
+}
+
+async function loadData() {
+  document.getElementById('table-area').innerHTML = '<div class="loading"><div class="spin"></div><div>Carregando...</div></div>';
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/ordens_servico?select=*&order=created_at.desc&limit=5000', {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}
+    });
+    allData = await res.json();
+    if (!Array.isArray(allData)) throw new Error('Erro ao carregar');
+    populateTecnicos();
+    applyFilter();
+    updateStats();
+  } catch(e) {
+    document.getElementById('table-area').innerHTML = '<div class="empty">❌ Erro ao carregar dados. Verifique a conexão.</div>';
+  }
+}
+
+function populateTecnicos() {
+  var tecs = [...new Set(allData.map(function(r){ return r.user_name; }).filter(Boolean))].sort();
+  var sel = document.getElementById('s-tec');
+  sel.innerHTML = '<option value="">Todos</option>';
+  tecs.forEach(function(t){ sel.innerHTML += '<option value="'+t+'">'+t+'</option>'; });
+}
+
+function updateStats() {
+  var today = new Date().toDateString();
+  document.getElementById('st-total').textContent = allData.length;
+  document.getElementById('st-hoje').textContent = allData.filter(function(r){ return new Date(r.created_at).toDateString()===today; }).length;
+  document.getElementById('st-lig').textContent = allData.filter(function(r){ return r.status==='instalado'; }).length;
+  document.getElementById('st-sub').textContent = allData.filter(function(r){ return r.status==='substituido'; }).length;
+  document.getElementById('st-bo').textContent = allData.filter(function(r){ return r.status==='bo'; }).length;
+}
+
+function applyFilter() {
+  var q = document.getElementById('s-q').value.toLowerCase().trim();
+  var tipo = document.getElementById('s-tipo').value;
+  var tec = document.getElementById('s-tec').value;
+  var de = document.getElementById('s-de').value;
+  var ate = document.getElementById('s-ate').value;
+
+  filtered = allData.filter(function(r) {
+    if (tipo && r.status !== tipo) return false;
+    if (tec && r.user_name !== tec) return false;
+    if (de && new Date(r.created_at) < new Date(de)) return false;
+    if (ate && new Date(r.created_at) > new Date(ate + 'T23:59:59')) return false;
+    if (q) {
+      var haystack = [r.ordem_servico,r.medidor,r.medidor_antigo,r.endereco,r.cidade,r.numero_instalacao,r.user_name,r.bo].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  document.getElementById('result-count').textContent = filtered.length + ' registro(s) encontrado(s)';
+  renderTable();
+  renderPagination();
+}
+
+var STATUS_LABEL = {instalado:'Ligação Nova', substituido:'Substituição', bo:'B.O'};
+var STATUS_CLASS = {instalado:'badge-green', substituido:'badge-orange', bo:'badge-red'};
+
+function renderTable() {
+  if (!filtered.length) {
+    document.getElementById('table-area').innerHTML = '<div class="empty">📂 Nenhum registro encontrado</div>';
+    return;
+  }
+  var start = (currentPage-1)*PAGE_SIZE;
+  var page = filtered.slice(start, start+PAGE_SIZE);
+
+  var html = '<div class="table-scroll"><table><thead><tr>'
+    + '<th>Data</th><th>OS</th><th>Nº Instalação</th><th>Tipo</th>'
+    + '<th>Endereço</th><th>Cidade</th><th>Med. Antigo</th><th>Med. Novo</th>'
+    + '<th>B.O</th><th>Técnico</th><th>Obs</th>'
+    + '</tr></thead><tbody>';
+
+  page.forEach(function(r) {
+    var dt = new Date(r.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var addr = [r.endereco, r.numero, r.complemento].filter(Boolean).join(', ');
+    html += '<tr>'
+      + '<td class="mono" style="white-space:nowrap;font-size:12px">'+dt+'</td>'
+      + '<td class="mono">'+( r.ordem_servico||'—')+'</td>'
+      + '<td class="mono">'+(r.numero_instalacao||'—')+'</td>'
+      + '<td><span class="badge '+(STATUS_CLASS[r.status]||'badge-green')+'">'+(STATUS_LABEL[r.status]||r.status||'—')+'</span></td>'
+      + '<td style="max-width:200px;font-size:13px">'+(addr||'—')+'</td>'
+      + '<td>'+(r.cidade||'—')+'</td>'
+      + '<td class="mono">'+(r.medidor_antigo||'—')+'</td>'
+      + '<td class="mono" style="color:var(--green)">'+(r.medidor||'—')+'</td>'
+      + '<td class="mono" style="color:var(--danger)">'+(r.bo||'—')+'</td>'
+      + '<td>'+(r.user_name||'—')+'</td>'
+      + '<td style="max-width:150px;font-size:12px;color:var(--text2)">'+(r.obs||'')+'</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('table-area').innerHTML = html;
+}
+
+function renderPagination() {
+  var total = Math.ceil(filtered.length / PAGE_SIZE);
+  if (total <= 1) { document.getElementById('pagination').innerHTML=''; return; }
+  var html = '<button class="page-btn" onclick="goPage('+(currentPage-1)+')" '+(currentPage===1?'disabled':'')+'>‹ Anterior</button>';
+  var start = Math.max(1, currentPage-2);
+  var end = Math.min(total, currentPage+2);
+  for (var i=start; i<=end; i++) {
+    html += '<button class="page-btn'+(i===currentPage?' active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
+  }
+  html += '<button class="page-btn" onclick="goPage('+(currentPage+1)+')" '+(currentPage===total?'disabled':'')+'>Próxima ›</button>';
+  html += '<span style="color:var(--text2);font-size:13px;margin-left:8px">Página '+currentPage+' de '+total+'</span>';
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) {
+  var total = Math.ceil(filtered.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage = p;
+  renderTable();
+  renderPagination();
+  window.scrollTo(0,0);
+}
+
+function getExportRows() {
+  return filtered.map(function(r) {
+    return {
+      'Data': new Date(r.created_at).toLocaleString('pt-BR'),
+      'OS': r.ordem_servico||'',
+      'Nº Instalação': r.numero_instalacao||'',
+      'Tipo': STATUS_LABEL[r.status]||r.status||'',
+      'Endereço': [r.endereco,r.numero].filter(Boolean).join(', '),
+      'Complemento': r.complemento||'',
+      'Cidade': r.cidade||'',
+      'Med. Antigo': r.medidor_antigo||'',
+      'Med. Novo': r.medidor||'',
+      'Nº B.O': r.bo||'',
+      'Observação': r.obs||'',
+      'Técnico': r.user_name||''
+    };
+  });
+}
+
+function exportExcel() {
+  if (!filtered.length) { alert('Nenhum dado para exportar'); return; }
+  var ws = XLSX.utils.json_to_sheet(getExportRows());
+  ws['!cols'] = [{wch:18},{wch:14},{wch:14},{wch:14},{wch:30},{wch:16},{wch:18},{wch:14},{wch:14},{wch:14},{wch:20},{wch:12}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'OS Scanner');
+  XLSX.writeFile(wb, 'OS_Scanner_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.xlsx');
+}
+
+function exportPDF() {
+  if (!filtered.length) { alert('Nenhum dado para exportar'); return; }
+  var rows = getExportRows();
+  var cols = Object.keys(rows[0]);
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10px;margin:16px;color:#111}'
+    + 'h2{font-size:15px;margin-bottom:4px;color:#003d5c}'
+    + 'p{font-size:10px;color:#666;margin-bottom:10px}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'th{background:#003d5c;color:#fff;padding:5px 7px;text-align:left;font-size:9px}'
+    + 'td{padding:4px 7px;border-bottom:1px solid #ddd;font-size:9px}'
+    + 'tr:nth-child(even){background:#f5f9ff}'
+    + '@media print{body{margin:8px}}'
+    + '</style></head><body>'
+    + '<h2>📋 OS Scanner — Relatório do Gestor</h2>'
+    + '<p>Gerado em: '+new Date().toLocaleString('pt-BR')+' · '+filtered.length+' registros</p>'
+    + '<table><thead><tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>'
+    + rows.map(function(r){return '<tr>'+cols.map(function(c){return '<td>'+(r[c]||'')+'</td>';}).join('')+'</tr>';}).join('')
+    + '</tbody></table></body></html>';
+  var w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 500);
+}
+</script>
+</body>
+</html>
